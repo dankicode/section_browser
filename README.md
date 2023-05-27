@@ -1,2 +1,3 @@
-# section_browser
-A command-line utility for reviewing AISC w-sections and applying combined loads to them
+# AISC Sections Browser 
+
+A command-line application that can query all w-sections in the AISC database, apply a combined loading to specified sections, and return the maximum von Mises stress that occurs in the sections for a given loading.
