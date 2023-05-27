@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 from math import sqrt, pi
+from sectionproperties.pre.pre import Material
+from sectionproperties.analysis.section import Section
+from sectionproperties.pre.library import steel_sections as steel
 
 def load_aisc_w_sections(filename: str = "aisc_w_sections.csv"):
     """

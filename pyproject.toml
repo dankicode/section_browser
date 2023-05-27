@@ -12,7 +12,8 @@ dynamic = ["version", "description"]
 dependencies = [
     "numpy >= 1.24.3",
     "pandas >= 2.0.1",
-    "sectionproperties >= 2.1.5"
+    "sectionproperties >= 2.1.5",
+    "typer >= 0.9.0"
 ]
 
 [project.urls]
