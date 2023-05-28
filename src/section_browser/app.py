@@ -128,6 +128,7 @@ def calculate_max_vm(subslice: str) -> None:
     current_indexes, filters, loads = _get_current_indexes()
     current_selection = aisc_full_df.iloc[current_indexes]
     parsed_slice = _parse_slice(subslice)
+    print(parsed_slice)
     analysis_selection = current_selection.loc[parsed_slice]
     analyzed_selection = wsec.calculate_section_stresses(analysis_selection, fy=350, **loads)
     title = "AISC W-Sections: Current selection with analysis"
@@ -140,6 +141,30 @@ def calculate_max_vm(subslice: str) -> None:
         )
     )
     
+
+@app.command(
+    name="status",
+    short_help="Display the current selection",
+)
+def display_table() -> None:
+    """
+    Returns None, calculates the max von Mises stress for the selected sections resulting from applied
+    loads. 
+    'sub_slice' is a str that represents a Python numeric index slice of rows, i.e. "start:stop:step" that,
+    if present, will be applied to the selection prior to calculating the stress.
+    """
+    aisc_full_df = wsec.load_aisc_w_sections()
+    current_indexes, filters, loads = _get_current_indexes()
+    current_selection = aisc_full_df.iloc[current_indexes]
+    title = "AISC W-Sections: Current selection"
+    print(
+        _table_output(
+            current_selection, 
+            title=title, 
+            filters=filters,
+            loads=loads
+        )
+    )
 
 
 def _apply_all_filters(current_selection: pd.DataFrame, kwargs: dict) -> None:
@@ -217,15 +242,32 @@ def _parse_slice(slice_arg: str) -> slice:
     """
     slice_components = slice_arg.split(":")
     if len(slice_components) == 1:
-        return slice(int(slice_components[0]))
+        start = int(slice_components[0])
+        stop = start
+        return slice(start, stop)
     elif len(slice_components) == 2:
-        if slice_components[2] == "":
-            return slice(int(slice_components[0]), None)
-        else:
-            return slice(int(slice_components[0], int(slice_components[1])))
+        start, stop = None, None
+        start_str, stop_str = slice_components
+        if start_str.isnumeric():
+            start = int(start_str)
+        if stop_str.isnumeric():
+            stop = int(stop_str)
+        return slice(start, stop)
+    elif len(slice_components) == 3:
+        start, stop, step = None, None, None
+        start_str, stop_str, step_str = slice_components
+        if start_str.isnumeric():
+            start = int(start_str)
+        if stop_str.isnumeric():
+            stop = int(stop_str)
+        if step_str.isnumeric():
+            step = int(step_str)
+        return slice(start, stop, step)
     else:
-        return slice(int(slice_components[0], int(slice_components[1]), int(slice_components[1])))
-
+        raise ValueError(
+            "The subslice argument must be a str in the form 'start[:stop[:step]].\n"
+            f"A value of {slice_arg} is not valid."
+        )
 
 def _clear_data_store() -> None:
     """
