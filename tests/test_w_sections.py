@@ -1,14 +1,12 @@
 import pandas as pd
-from aisc_db import load_aisc_db, sections_by_type, values_greater_than, values_less_than, sort_by_weight
+import section_browser.w_sections as wsec
 
-def test_load_aisc_db():
-    us_df = load_aisc_db('us')
-    si_df = load_aisc_db('si')
-    assert si_df.iloc[0, 2] == "W1100X499"
-    assert us_df.iloc[0, 2] == "W44X335"
-    
-    
-def test_sections_by_type():
+def test_load_aisc_w_sections():
+    si_df = wsec.load_aisc_w_sections()
+    assert si_df.iloc[0, 1] == "W1100X499"
+      
+
+def test_values_greater_than_or_equal():
     test_df = pd.DataFrame(data = [
         ["X", "A", 200, 300], 
         ["X", "B", 250, 250], 
@@ -16,9 +14,9 @@ def test_sections_by_type():
         ["Y", "D", 500, 700]], 
         columns=["Type", "Section", "Ix", "Sy"]
     )
-    selection = sections_by_type(test_df, "Y")
+    selection = wsec.sections_greater_than_or_equal(test_df, Ix=400)
     assert selection.iloc[0, 1] == "C"
-    assert selection.iloc[1, 1] == "D"
+    assert selection.iloc[1, 1] == "D"   
     
 
 def test_values_greater_than():
@@ -29,11 +27,23 @@ def test_values_greater_than():
         ["Y", "D", 500, 700]], 
         columns=["Type", "Section", "Ix", "Sy"]
     )
-    selection = values_greater_than(test_df, Ix=400)
-    assert selection.iloc[0, 1] == "C"
-    assert selection.iloc[1, 1] == "D"   
+    selection = wsec.sections_greater_than(test_df, Ix=400)
+    assert selection.iloc[0, 1] == "D"  
+
     
-    
+def test_values_less_than_or_equal():
+    test_df = pd.DataFrame(data = [
+        ["X", "A", 200, 300], 
+        ["X", "B", 250, 250], 
+        ["Y", "C", 400, 600], 
+        ["Y", "D", 500, 700]], 
+        columns=["Type", "Section", "Ix", "Sy"]
+    )
+    selection = wsec.sections_less_than_or_equal(test_df, Sy=300)
+    assert selection.iloc[0, 1] == "A"
+    assert selection.iloc[1, 1] == "B"   
+
+
 def test_values_less_than():
     test_df = pd.DataFrame(data = [
         ["X", "A", 200, 300], 
@@ -42,9 +52,8 @@ def test_values_less_than():
         ["Y", "D", 500, 700]], 
         columns=["Type", "Section", "Ix", "Sy"]
     )
-    selection = values_less_than(test_df, Sy=300)
-    assert selection.iloc[0, 1] == "A"
-    assert selection.iloc[1, 1] == "B"   
+    selection = wsec.sections_less_than(test_df, Sy=300)
+    assert selection.iloc[0, 1] == "B"
     
     
 def test_sort_by_weight():
@@ -55,6 +64,6 @@ def test_sort_by_weight():
         ["Y", "D", 500, 700]], 
         columns=["Type", "Section", "Ix", "W"]
     )
-    selection = sort_by_weight(test_df)
+    selection = wsec.sort_by_weight(test_df)
     assert selection.iloc[0, 1] == "B"
     assert selection.iloc[1, 1] == "A"  

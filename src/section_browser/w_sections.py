@@ -1,3 +1,4 @@
+import pathlib
 import numpy as np
 import pandas as pd
 from typing import Optional
@@ -6,11 +7,11 @@ from sectionproperties.pre.pre import Material
 from sectionproperties.analysis.section import Section
 from sectionproperties.pre.library import steel_sections as steel
 
-def load_aisc_w_sections(filename: str = "aisc_w_sections.csv"):
+def load_aisc_w_sections():
     """
     Returns a DataFrame representing the data stored in 'filename'.
     """
-    return pd.read_csv(filename)
+    return pd.read_csv(pathlib.Path(__file__).parents[0] / 'aisc_w_sections.csv')
 
 
 def sections_greater_than(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
@@ -68,6 +69,20 @@ def sections_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
     sub_df = aisc_db.copy()
     for key, value in kwargs.items():
         sub_df = sub_df.loc[sub_df[key] == value]
+        if sub_df.empty:
+            print(f"No records match all of the parameters: {kwargs}")
+    return sub_df
+
+
+def sections_approx_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Returns filtered
+    """
+    sub_df = aisc_db.copy()
+    for key, value in kwargs.items():
+        gt_mask = sub_df[key] >= value*0.95
+        lt_mask = sub_df[key] <= value*1.05
+        sub_df = sub_df.loc[lt_mask & gt_mask]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
     return sub_df

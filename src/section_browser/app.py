@@ -1,3 +1,4 @@
+
 from typing import Optional
 from dataclasses import dataclass
 import json
@@ -15,12 +16,21 @@ DATA_STORE_FILE = pathlib.Path(__file__).parents[0] / "DATA_STORE.json"
 ROW_SELECTIONS: list[int] = []
 DATA_STORE: dict = {}
 
-app = typer.Typer(add_completion=False)
+APP_INTRO = typer.style("""
+AISC sections database W-section selection tool (2023-05-28)
+""", fg=typer.colors.BRIGHT_YELLOW, bold=True)
+
+app = typer.Typer(
+    add_completion=False, 
+    no_args_is_help=True,
+    help=APP_INTRO,
+    )
 
 
 @app.command(
     name="all", 
     short_help="Loads all AISC w-sections and applies filters",
+    help="Starts with a new database and applies optional filters based on column names",
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
     )
 def all_sections(ctx: typer.Context) -> pd.DataFrame:
@@ -197,6 +207,9 @@ def _apply_filter(
         "<=": wsec.sections_less_than_or_equal,
         ">": wsec.sections_greater_than,
         ">=": wsec.sections_greater_than,
+        "@": wsec.sections_approx_equal,
+        "==": wsec.sections_equal,
+        "!=": wsec.sections_not_equal,
     }
     operator, value = _parse_comparison_value(comparison_value)
     operation_function = OPERATIONS[operator]
@@ -217,11 +230,12 @@ def _parse_comparison_value(comparison_value: str) -> tuple[str, float]:
     """
     comparison = ""
     value = ""
-    OPERATORS = "<>=!"
+    OPERATORS = "<>=!@"
+    VALID_SYMBOLS = ".-eE"
     for char in comparison_value:
         if char in OPERATORS:
             comparison += char
-        elif char.isnumeric():
+        elif char.isnumeric() or char in VALID_SYMBOLS:
             value += char
         else:
             raise ValueError(
@@ -248,19 +262,19 @@ def _parse_slice(slice_arg: str) -> slice:
     elif len(slice_components) == 2:
         start, stop = None, None
         start_str, stop_str = slice_components
-        if start_str.isnumeric():
+        if start_str.replace("-", "").isnumeric():
             start = int(start_str)
-        if stop_str.isnumeric():
+        if stop_str.replace("-", "").isnumeric():
             stop = int(stop_str)
         return slice(start, stop)
     elif len(slice_components) == 3:
         start, stop, step = None, None, None
         start_str, stop_str, step_str = slice_components
-        if start_str.isnumeric():
+        if start_str.replace("-", "").isnumeric():
             start = int(start_str)
-        if stop_str.isnumeric():
+        if stop_str.replace("-", "").isnumeric():
             stop = int(stop_str)
-        if step_str.isnumeric():
+        if step_str.replace("-", "").isnumeric():
             step = int(step_str)
         return slice(start, stop, step)
     else:
@@ -269,31 +283,52 @@ def _parse_slice(slice_arg: str) -> slice:
             f"A value of {slice_arg} is not valid."
         )
 
-def _clear_data_store() -> None:
+
+def _parse_kwargs(extra_args: list[str]):
+    """
+    Returns a dictionary representing the key, value pairs contained
+    in 'extra_args' where 'extra_args' is an ordered stream of key, value
+    pairs: [key1, value1, key2, value2, etc.]
+    """
+    kwargs = {}
+    pair = []
+    for idx, extra_arg in enumerate(extra_args):
+        if idx % 2 == 0:
+            pair.append(extra_arg)
+        else:
+            pair.append(extra_arg)
+            kwargs.update({pair[0].replace("-",""): pair[1]})
+            pair = []
+    return kwargs
+
+
+def _clear_data_store(path: pathlib.Path = DATA_STORE_FILE) -> None:
     """
     Removes all data in the data store file leaving an empty json file.
     """
-    json_data = {"indexes": [], "filters": {}}
-    with open(DATA_STORE_FILE, 'w') as file:
+    json_data = {"indexes": [], "filters": {}, "loads": {}}
+    with open(path, 'w') as file:
         json.dump(json_data, file)
 
 
-def _set_current_indexes(indexes: list[int], filters: dict, loads: dict) -> None:
+def _set_current_indexes(indexes: list[int], filters: dict, loads: dict, path: pathlib.Path = DATA_STORE_FILE) -> None:
     """
     Stores the list of indexes into the data store file
     """
     json_data = {"indexes": indexes, "filters": filters, "loads": loads}
-    with open(DATA_STORE_FILE, 'w') as file:
+    with open(path, 'w') as file:
         json.dump(json_data, file)
 
 
-def _get_current_indexes() -> list[int]:
+def _get_current_indexes(path: pathlib.Path = DATA_STORE_FILE) -> list[int]:
     """
     Returns the list of indexes currently in the data store.
     """
-    with open(DATA_STORE_FILE, 'r') as file:
+    with open(path, 'r') as file:
         json_data = json.load(file)
     return json_data['indexes'], json_data['filters'], json_data['loads']
+
+
 
 
 def _create_table(
@@ -311,7 +346,7 @@ def _create_table(
     show "..."
     """
     table = Table()
-    display_df = df.drop(['Type', 'W', 'kdes'], axis=1)
+    display_df = wsec.sort_by_weight(df.drop(['Type', 'kdes'], axis=1))
     # Columns
     column_names = display_df.columns
     if n_cols is not None and len(column_names) < n_cols:
@@ -352,19 +387,6 @@ def _table_output(
         subtitle=subtitle
         )
     return panel
-
-
-def _parse_kwargs(extra_args: list[str]):
-    kwargs = {}
-    pair = []
-    for idx, extra_arg in enumerate(extra_args):
-        if idx % 2 == 0:
-            pair.append(extra_arg)
-        else:
-            pair.append(extra_arg)
-            kwargs.update({pair[0].replace("-",""): pair[1]})
-            pair = []
-    return kwargs
 
 if __name__ == "__main__":
     app()
