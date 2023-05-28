@@ -19,6 +19,18 @@ def sections_greater_than(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """
     sub_df = aisc_db.copy()
     for key, value in kwargs.items():
+        sub_df = sub_df.loc[sub_df[key] > value]
+        if sub_df.empty:
+            print(f"No records match all of the parameters: {kwargs}")
+    return sub_df
+
+
+def sections_greater_than_or_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Returns filtered df a
+    """
+    sub_df = aisc_db.copy()
+    for key, value in kwargs.items():
         sub_df = sub_df.loc[sub_df[key] >= value]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
@@ -31,7 +43,43 @@ def sections_less_than(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """
     sub_df = aisc_db.copy()
     for key, value in kwargs.items():
+        sub_df = sub_df.loc[sub_df[key] < value]
+        if sub_df.empty:
+            print(f"No records match all of the parameters: {kwargs}")
+    return sub_df
+
+
+def sections_less_than_or_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Returns filtered
+    """
+    sub_df = aisc_db.copy()
+    for key, value in kwargs.items():
         sub_df = sub_df.loc[sub_df[key] <= value]
+        if sub_df.empty:
+            print(f"No records match all of the parameters: {kwargs}")
+    return sub_df
+
+
+def sections_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Returns filtered
+    """
+    sub_df = aisc_db.copy()
+    for key, value in kwargs.items():
+        sub_df = sub_df.loc[sub_df[key] == value]
+        if sub_df.empty:
+            print(f"No records match all of the parameters: {kwargs}")
+    return sub_df
+
+
+def sections_not_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Returns filtered
+    """
+    sub_df = aisc_db.copy()
+    for key, value in kwargs.items():
+        sub_df = sub_df.loc[sub_df[key] == value]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
     return sub_df
