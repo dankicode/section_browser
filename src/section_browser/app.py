@@ -6,6 +6,7 @@ import pandas as pd
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.text import Text
 from rich import print
 import typer
 import section_browser.w_sections as wsec
@@ -32,9 +33,17 @@ def all_sections(ctx: typer.Context) -> pd.DataFrame:
     kwargs = _parse_kwargs(ctx.args)
     _clear_data_store()
     aisc_full_df = wsec.load_aisc_w_sections()
+    loads = {}
     current_selection = _apply_all_filters(aisc_full_df, kwargs)
-    _set_current_indexes(list(current_selection.index), kwargs)
-    print(_table_output(current_selection, title="AISC W-Sections: Current selection", subtitle=str(kwargs)))
+    _set_current_indexes(list(current_selection.index), kwargs, loads)
+    print(
+        _table_output(
+            current_selection, 
+            title="AISC W-Sections: Current selection", 
+            filters=kwargs,
+            loads=loads,
+        )
+    )
 
 
 @app.command(
@@ -51,14 +60,86 @@ def filter_sections(ctx: typer.Context) -> pd.DataFrame:
     """
     kwargs = _parse_kwargs(ctx.args)
     aisc_full_df = wsec.load_aisc_w_sections()
-    current_indexes, prev_kwargs = _get_current_indexes()
+    current_indexes, prev_kwargs, loads = _get_current_indexes()
     current_selection = aisc_full_df.iloc[current_indexes]
     current_selection = _apply_all_filters(current_selection, kwargs)
     prev_kwargs.update(kwargs)
-    _set_current_indexes(list(current_selection.index), prev_kwargs)
+    _set_current_indexes(list(current_selection.index), prev_kwargs, loads)
     title = "AISC W-Sections: Current selection"
     subtitle = str(prev_kwargs)
-    print(_table_output(current_selection, title=title, subtitle=subtitle))
+    print(
+        _table_output(
+            current_selection, 
+            title=title, 
+            filters=prev_kwargs,
+            loads=loads
+        )
+    )
+
+
+@app.command(
+    name="apply",
+    short_help="Apply loads to sections: N, Vx, Vy, Mx, My, T (scale to N, N-mm)",
+)
+def apply_loads(
+    n: Optional[float] = None,
+    mx: Optional[float] = None,
+    my: Optional[float] = None,
+    vx: Optional[float] = None,
+    vy: Optional[float] = None,
+    t: Optional[float] = None,
+    ) -> None:
+    """
+    Returns None, adds the loads supplied to the data store
+    """
+    actions = ["N", "Mx", "My", "Vx", "Vy", "T"]
+    args = locals()
+    loads = {}
+    for action in actions:
+        if args[action.lower()] is not None:
+            loads[action] = args[action.lower()]
+    indexes, filters, prev_loads = _get_current_indexes()
+    aisc_full_df = wsec.load_aisc_w_sections()
+    current_selection = aisc_full_df.iloc[indexes]
+    _set_current_indexes(indexes, filters, loads)
+    title = "AISC W-Sections: Current selection"
+    print(
+        _table_output(
+            current_selection, 
+            title=title, 
+            filters=filters,
+            loads=loads
+        )
+    )
+
+
+@app.command(
+    name="maxvm",
+    short_help="Calculate maximum von Mises stress on selected sections resulting from applied loads",
+)
+def calculate_max_vm(subslice: str) -> None:
+    """
+    Returns None, calculates the max von Mises stress for the selected sections resulting from applied
+    loads. 
+    'sub_slice' is a str that represents a Python numeric index slice of rows, i.e. "start:stop:step" that,
+    if present, will be applied to the selection prior to calculating the stress.
+    """
+    aisc_full_df = wsec.load_aisc_w_sections()
+    current_indexes, filters, loads = _get_current_indexes()
+    current_selection = aisc_full_df.iloc[current_indexes]
+    parsed_slice = _parse_slice(subslice)
+    analysis_selection = current_selection.loc[parsed_slice]
+    analyzed_selection = wsec.calculate_section_stresses(analysis_selection, fy=350, **loads)
+    title = "AISC W-Sections: Current selection with analysis"
+    print(
+        _table_output(
+            analyzed_selection, 
+            title=title, 
+            filters=filters,
+            loads=loads
+        )
+    )
+    
 
 
 def _apply_all_filters(current_selection: pd.DataFrame, kwargs: dict) -> None:
@@ -98,7 +179,7 @@ def _apply_filter(
     return updated_selection
 
 
-def _parse_comparison_value(comparison_value: str) -> tuple[Optional[str], float]:
+def _parse_comparison_value(comparison_value: str) -> tuple[str, float]:
     """
     Returns a tuple containing a string of the comparison operator followed
     by the comparison value. If no comparison operator is present, then an
@@ -127,6 +208,25 @@ def _parse_comparison_value(comparison_value: str) -> tuple[Optional[str], float
     return comparison, float(value)
 
 
+def _parse_slice(slice_arg: str) -> slice:
+    """
+    Returns a tuple representing the components of a Python slice: start, stop, step.
+
+    _parse_slice("2") # slice(2)
+    _parse_slice("2:") # slice(2, None)
+    """
+    slice_components = slice_arg.split(":")
+    if len(slice_components) == 1:
+        return slice(int(slice_components[0]))
+    elif len(slice_components) == 2:
+        if slice_components[2] == "":
+            return slice(int(slice_components[0]), None)
+        else:
+            return slice(int(slice_components[0], int(slice_components[1])))
+    else:
+        return slice(int(slice_components[0], int(slice_components[1]), int(slice_components[1])))
+
+
 def _clear_data_store() -> None:
     """
     Removes all data in the data store file leaving an empty json file.
@@ -136,11 +236,11 @@ def _clear_data_store() -> None:
         json.dump(json_data, file)
 
 
-def _set_current_indexes(indexes: list[int], filters: dict) -> None:
+def _set_current_indexes(indexes: list[int], filters: dict, loads: dict) -> None:
     """
     Stores the list of indexes into the data store file
     """
-    json_data = {"indexes": indexes, "filters": filters}
+    json_data = {"indexes": indexes, "filters": filters, "loads": loads}
     with open(DATA_STORE_FILE, 'w') as file:
         json.dump(json_data, file)
 
@@ -151,7 +251,7 @@ def _get_current_indexes() -> list[int]:
     """
     with open(DATA_STORE_FILE, 'r') as file:
         json_data = json.load(file)
-    return json_data['indexes'], json_data['filters']
+    return json_data['indexes'], json_data['filters'], json_data['loads']
 
 
 def _create_table(
@@ -193,13 +293,22 @@ def _table_output(
         n_cols: Optional[int] = None,
         n_rows: Optional[int] = None,
         title: Optional[str] = None,
-        subtitle: Optional[str] = None,
+        filters: Optional[str] = None,
+        loads: Optional[str] = None,
         ) -> Panel:
     """
     Returns a rich.panel.Panel populated with a rich.table.Table
     containing the information within 'df'
     """
-    panel = Panel(_create_table(df, n_cols, n_rows), title=title, subtitle=subtitle)
+    subtitle_filters = Text(f"{filters}")
+    subtitle_loads = Text(f"{loads}", style="bold red")
+    if subtitle_loads != "":
+        subtitle = subtitle_filters + " | " + subtitle_loads 
+    panel = Panel(
+        _create_table(df, n_cols, n_rows), 
+        title=title, 
+        subtitle=subtitle
+        )
     return panel
 
 

@@ -109,7 +109,7 @@ def create_section(
     steel_350 = Material("Steel 350 MPa", 200e3, 0.3, 350, 1, color='lightgrey')
     geom = steel.i_section(d=d, b=b, t_f=t_f, t_w=t_w, r=r, n_r = 12, material=steel_350)
     geom.create_mesh(mesh_size)
-    section = Section(geom)
+    section = Section(geom, time_info=True)
     return section
 
 
@@ -161,7 +161,6 @@ def calculate_section_stresses(
     """
     acc = []
     for df_idx, row in sections_df.iterrows():
-        print(f"Calculating section: {row['Section']}")
         section = create_section(row, mesh_size=100)
         max_vm_stress = max_vonmises_stress(section, N, Mx, My, Vx, Vy, Mz)
         row['fy'] = fy
