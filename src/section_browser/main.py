@@ -129,7 +129,6 @@ def calculate_max_vm(subslice: str) -> None:
     current_indexes, filters, loads = _get_current_indexes()
     current_selection = aisc_full_df.iloc[current_indexes]
     parsed_slice = _parse_slice(subslice)
-    print(parsed_slice)
     analysis_selection = current_selection.loc[parsed_slice]
     analyzed_selection = wsec.calculate_section_stresses(
         analysis_selection, fy=350, **loads
@@ -323,7 +322,7 @@ def _create_table(
     show "..."
     """
     table = Table()
-    display_df = wsec.sort_by_weight(df.drop(["Type", "kdes"], axis=1))
+    display_df = df.drop(["Type", "kdes"], axis=1)
     # Columns
     column_names = display_df.columns
     if n_cols is not None and len(column_names) < n_cols:
