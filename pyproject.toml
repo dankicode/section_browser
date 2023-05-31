@@ -25,6 +25,3 @@ test = [
     "pytest >= 7.3.1",
 ]
 
-
-[project.scripts]
-sectionbrowser = "section_browser.main:app"

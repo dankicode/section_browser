@@ -81,8 +81,8 @@ def sections_approx_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """
     sub_df = aisc_db.copy()
     for key, value in kwargs.items():
-        gt_mask = sub_df[key] >= value * 0.95
-        lt_mask = sub_df[key] <= value * 1.05
+        gt_mask = sub_df[key] >= value * 0.90
+        lt_mask = sub_df[key] <= value * 1.10
         sub_df = sub_df.loc[lt_mask & gt_mask]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
