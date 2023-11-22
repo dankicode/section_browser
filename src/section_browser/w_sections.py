@@ -144,7 +144,7 @@ def max_vonmises_stress(
     """
     section.calculate_geometric_properties()
     section.calculate_warping_properties()
-    stress_result = section.calculate_stress(N, Vx, Vy, Mx, My, Mzz=Mz)
+    stress_result = section.calculate_stress(N, Vx, Vy, Mx, My, Mz)
     stress_dict = stress_result.get_stress()[0]
     vm = stress_dict["sig_vm"]
     return np.max(np.abs(vm))
