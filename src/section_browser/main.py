@@ -178,18 +178,23 @@ def _apply_filter(
     value to compare against the records in the current rows of the
     aisc db
     """
-    OPERATIONS = {
-        "<": wsec.sections_less_than,
-        "<=": wsec.sections_less_than_or_equal,
-        ">": wsec.sections_greater_than,
-        ">=": wsec.sections_greater_than,
-        "@": wsec.sections_approx_equal,
-        "==": wsec.sections_equal,
-        "!=": wsec.sections_not_equal,
+    operations_translate = {
+        ">": "ge",
+        "<": "le",
+        "@": "~=",
+        "~=": "~=",
+        "ge": "ge",
+        "le": "le",
     }
-    operator, value = _parse_comparison_value(comparison_value)
-    operation_function = OPERATIONS[operator]
-    updated_selection = operation_function(current_selection, **{field: value})
+    operations = {
+        "le": wsec.section_filter,
+        "ge": wsec.section_filter,
+        "~=": wsec.sections_approx_equal,
+    }
+    parsed_operator, value = _parse_comparison_value(comparison_value)
+    operator = operations_translate[parsed_operator]
+    operation_function = operations[operator]
+    updated_selection = operation_function(current_selection, operator, **{field: value})
     return updated_selection
 
 
@@ -200,27 +205,20 @@ def _parse_comparison_value(comparison_value: str) -> tuple[str, float]:
     empty string will occupy the first position of the tuple.
 
     Examples:
-        _parse_comparison_value("<=234") # ("<=", 234.0)
+        _parse_comparison_value("<=234") # ("<=", 234.0
         _parse_comparison_value("234") # (None, 234.0)
         _parse_comparison_value("==312") # ("==", 312.0)
     """
-    comparison = ""
-    value = ""
-    OPERATORS = "<>=!@"
-    VALID_SYMBOLS = ".-eE"
-    for char in comparison_value:
-        if char in OPERATORS:
-            comparison += char
-        elif char.isnumeric() or char in VALID_SYMBOLS:
-            value += char
-        else:
-            raise ValueError(
-                "The value passed as the comparison value is invalid. "
-                "A valid value contains a comparison operator (<, >, <=, >=, !=, ==) "
-                "followed by a number without any spaces. "
-                f"\n'{comparison_value}' is invalid."
-            )
-    return comparison, float(value)
+    operators = "~= <= >= < > = @ ge le".split()
+    for operator in operators:
+        if operator in comparison_value:
+            try:
+                return operator, float(comparison_value.split(operator)[-1])
+            except:
+                attempted_value = comparison_value.split(operator)[-1]
+                raise ValueError(
+                    f"Cannot perform filtering based on the following input: {operator=} {attempted_value=}"
+                )
 
 
 def _parse_slice(slice_arg: str) -> slice:

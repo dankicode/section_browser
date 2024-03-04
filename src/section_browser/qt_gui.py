@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
-from PySide2.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog
-from PySide2.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog
+from PySide6.QtCore import Qt
 from section_browser import w_sections as wsec
 
 def launch_gui_app():
@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
                     filters.update({field_name: input_value})
                 except ValueError:
                     pass
-            filtered_df = wsec.sections_approx_equal(df, **filters)
+            filtered_df = wsec.sections_approx_equal(df, "@", **filters)
             # filters = [float(input_field.text()) if input_field.text().replace(".", "").isnumeric() for input_field in self.input1_fields ]
             # filtered_data = data[data[self.input1_fields[0].text()].isin(filters)]
             self.display_data(filtered_df)
@@ -165,4 +165,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

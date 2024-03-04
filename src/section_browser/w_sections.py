@@ -15,87 +15,39 @@ def load_aisc_w_sections():
     return pd.read_csv(pathlib.Path(__file__).parents[0] / "aisc_w_sections.csv")
 
 
-def sections_greater_than(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+def section_filter(sections_df: pd.DataFrame, operator: str, **kwargs) -> pd.DataFrame:
     """
-    Returns filtered df a
+    Returns a new DataFrame representing 'sections_df' but filtered with 'operator'
+    according to the given 'kwargs'
+    sections_df: A DataFrame with records of structural sections
+    operator: str, either {"ge", "le"}, greater-than-or-equal-to and less-than-or-equal-to
+    'kwargs': The kwargs provided should correspond to column names in 'sections_df'
+        (which should all be valid Python identifiers)
+        e.g. if there is a column in 'sections_df' called Ix then the DataFrame
+        could be filtered by calling the function as such:
+            section_filter(sections_df, 'ge', Ix=400e6)
     """
-    sub_df = aisc_db.copy()
+    sub_df = sections_df.copy()
     for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] > value]
+        if operator.lower() == "le":
+            sub_df = sub_df.loc[sub_df[key] <= value]
+        elif operator.lower() == "ge":
+            sub_df = sub_df.loc[sub_df[key] >= value]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
     return sub_df
 
 
-def sections_greater_than_or_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
+def sections_approx_equal(aisc_db: pd.DataFrame, operator: str, **kwargs) -> pd.DataFrame:
     """
-    Returns filtered df a
-    """
-    sub_df = aisc_db.copy()
-    for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] >= value]
-        if sub_df.empty:
-            print(f"No records match all of the parameters: {kwargs}")
-    return sub_df
-
-
-def sections_less_than(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """
-    Returns filtered
-    """
-    sub_df = aisc_db.copy()
-    for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] < value]
-        if sub_df.empty:
-            print(f"No records match all of the parameters: {kwargs}")
-    return sub_df
-
-
-def sections_less_than_or_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """
-    Returns filtered
-    """
-    sub_df = aisc_db.copy()
-    for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] <= value]
-        if sub_df.empty:
-            print(f"No records match all of the parameters: {kwargs}")
-    return sub_df
-
-
-def sections_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """
-    Returns filtered
-    """
-    sub_df = aisc_db.copy()
-    for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] == value]
-        if sub_df.empty:
-            print(f"No records match all of the parameters: {kwargs}")
-    return sub_df
-
-
-def sections_approx_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """
-    Returns filtered
+    Returns aisc_db filtered by values approximately equal to the given
+    key/values in kwargs.
     """
     sub_df = aisc_db.copy()
     for key, value in kwargs.items():
         gt_mask = sub_df[key] >= value * 0.90
         lt_mask = sub_df[key] <= value * 1.10
         sub_df = sub_df.loc[lt_mask & gt_mask]
-        if sub_df.empty:
-            print(f"No records match all of the parameters: {kwargs}")
-    return sub_df
-
-
-def sections_not_equal(aisc_db: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """
-    Returns filtered
-    """
-    sub_df = aisc_db.copy()
-    for key, value in kwargs.items():
-        sub_df = sub_df.loc[sub_df[key] == value]
         if sub_df.empty:
             print(f"No records match all of the parameters: {kwargs}")
     return sub_df

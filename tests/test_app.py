@@ -50,11 +50,11 @@ def test_parse_slice():
 
 
 def test_parse_comparison_value():
-    cv0 = "<=234"
+    cv0 = "<234"
     cv1 = ">93.0"
-    cv2 = "==34.5"
-    cv3 = "!=43.5e6"
-    assert main._parse_comparison_value(cv0) == ("<=", 234.0)
+    cv2 = "~=34.5"
+    cv3 = "@43.5e6"
+    assert main._parse_comparison_value(cv0) == ("<", 234.0)
     assert main._parse_comparison_value(cv1) == (">", 93.0)
-    assert main._parse_comparison_value(cv2) == ("==", 34.5)
-    assert main._parse_comparison_value(cv3) == ("!=", 43.5e6)
+    assert main._parse_comparison_value(cv2) == ("~=", 34.5)
+    assert main._parse_comparison_value(cv3) == ("@", 43.5e6)
